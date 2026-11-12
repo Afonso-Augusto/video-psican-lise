@@ -1,0 +1,275 @@
+import { registerRoot } from "remotion";
+import { RemotionRoot } from "./Root";
+
+registerRoot(RemotionRoot);
+import React from "react";
+import { Composition } from "remotion";
+import { VideoPsicanalise } from "./Video";
+
+export const RemotionRoot: React.FC = () => {
+  return (
+    <Composition
+      id="VideoPsicanalise"
+      component={VideoPsicanalise}
+      durationInFrames={30 * 88}
+      fps={30}
+      width={1920}
+      height={1080}
+    />
+  );
+};
+import React from "react";
+import {
+  AbsoluteFill,
+  interpolate,
+  Sequence,
+  spring,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
+
+const C = {
+  ink: "#172033",
+  night: "#101827",
+  cream: "#F4EBD8",
+  paper: "#E9D9B9",
+  coral: "#E77D62",
+  gold: "#E8B95B",
+  mint: "#8AB7A2",
+  lilac: "#A99ACB",
+};
+
+const Pixel: React.FC<{x:number;y:number;s?:number;color:string}> = ({x,y,s=18,color}) =>
+  <div style={{position:"absolute",left:x,top:y,width:s,height:s,background:color,boxShadow:`${s}px 0 0 ${color}, 0 ${s}px 0 ${color}, ${s}px ${s}px 0 ${color}`}} />;
+
+const Backdrop: React.FC<{kind:"intro"|"mind"|"play"}> = ({kind}) => {
+  const bg = kind === "intro" ? C.ink : kind === "mind" ? C.night : "#263B3A";
+  return <AbsoluteFill style={{background:bg, overflow:"hidden"}}>
+    <div style={{position:"absolute",inset:0,opacity:.12,backgroundImage:"linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px),linear-gradient(90deg,rgba(255,255,255,.18) 1px, transparent 1px)",backgroundSize:"32px 32px"}}/>
+    {kind === "intro" && <>
+      <Pixel x={150} y={170} s={24} color={C.coral}/><Pixel x={1630} y={700} s={28} color={C.gold}/>
+      <div style={{position:"absolute",left:1300,top:160,width:220,height:220,border:"12px solid "+C.mint,opacity:.8}}/>
+      <div style={{position:"absolute",left:220,top:730,width:250,height:12,background:C.lilac}}/>
+    </>}
+    {kind === "mind" && <>
+      <div style={{position:"absolute",left:1450,top:150,width:260,height:260,borderRadius:"50%",background:C.lilac,opacity:.13}}/>
+      <Pixel x={260} y={760} s={24} color={C.gold}/><Pixel x={1580} y={780} s={20} color={C.coral}/>
+      <div style={{position:"absolute",left:0,right:0,bottom:0,height:140,background:"#202B40"}}/>
+    </>}
+    {kind === "play" && <>
+      <div style={{position:"absolute",left:1400,top:120,width:250,height:250,background:"#E7C88D",opacity:.16}}/>
+      <Pixel x={180} y={180} s={20} color={C.mint}/><Pixel x={1640} y={760} s={24} color={C.coral}/>
+      <div style={{position:"absolute",left:0,right:0,bottom:0,height:170,background:"#1D302F"}}/>
+    </>}
+  </AbsoluteFill>;
+};
+
+const FadeText: React.FC<{title:string; subtitle?:string; accent?:string; align?:"left"|"center"}> = ({title,subtitle,accent=C.gold,align="left"}) => {
+  const f = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const enter = spring({frame:f, fps, config:{damping:16, stiffness:90}});
+  const opacity = interpolate(f,[0,12],[0,1],{extrapolateRight:"clamp"});
+  return <div style={{position:"absolute",left:align==="center"?180:190,right:190,top:"50%",transform:`translateY(-50%) translateY(${(1-enter)*55}px)`,opacity,textAlign:align,fontFamily:"Courier New, monospace",color:C.cream}}>
+    <div style={{width:110,height:12,background:accent,margin:align==="center"?"0 auto 34px":"0 0 34px"}}/>
+    <div style={{fontSize:76,fontWeight:900,lineHeight:1.12,letterSpacing:-3,textShadow:"6px 6px 0 rgba(0,0,0,.22)"}}>{title}</div>
+    {subtitle && <div style={{fontSize:32,lineHeight:1.45,marginTop:30,color:C.paper,maxWidth:1250,marginLeft:align==="center"?"auto":0,marginRight:align==="center"?"auto":0}}>{subtitle}</div>}
+  </div>;
+};
+
+const Tag: React.FC<{children:React.ReactNode}> = ({children}) =>
+  <div style={{display:"inline-block",padding:"12px 18px",background:C.gold,color:C.ink,fontFamily:"Courier New",fontWeight:900,fontSize:22,letterSpacing:1}}>{children}</div>;
+
+const Scene: React.FC<{kind:"intro"|"mind"|"play";title:string;subtitle?:string;tag?:string;accent?:string;center?:boolean}> =
+({kind,title,subtitle,tag,accent,center}) => <AbsoluteFill>
+  <Backdrop kind={kind}/>
+  {tag && <div style={{position:"absolute",top:100,left:190}}><Tag>{tag}</Tag></div>}
+  <FadeText title={title} subtitle={subtitle} accent={accent} align={center?"center":"left"}/>
+</AbsoluteFill>;
+
+const BulletScene: React.FC<{kind:"mind"|"play";tag:string;title:string;items:string[];accent?:string}> =
+({kind,tag,title,items,accent=C.coral}) => {
+  const f=useCurrentFrame(); const {fps}=useVideoConfig();
+  return <AbsoluteFill>
+    <Backdrop kind={kind}/>
+    <div style={{position:"absolute",left:150,top:110}}><Tag>{tag}</Tag></div>
+    <div style={{position:"absolute",left:150,top:220,width:1600,color:C.cream,fontFamily:"Courier New"}}>
+      <div style={{fontSize:62,fontWeight:900,marginBottom:48,lineHeight:1.1}}>{title}</div>
+      {items.map((item,i)=>{
+        const p=spring({frame:f-i*9,fps,config:{damping:16}});
+        return <div key={i} style={{display:"flex",alignItems:"center",gap:26,marginBottom:28,opacity:interpolate(f,[i*9,i*9+10],[0,1],{extrapolateRight:"clamp"}),transform:`translateX(${(1-p)*55}px)`,fontSize:34,lineHeight:1.3}}>
+          <div style={{width:22,height:22,background:accent,flexShrink:0,boxShadow:"8px 8px 0 rgba(0,0,0,.25)"}}/>
+          <div>{item}</div>
+        </div>
+      })}
+    </div>
+  </AbsoluteFill>;
+};
+
+export const VideoPsicanalise: React.FC = () => {
+  return <AbsoluteFill style={{background:C.ink}}>
+    <Sequence from={0} durationInFrames={300}>
+      <Scene kind="intro" tag="PSICANÁLISE • DOIS ARTIGOS" title="O que existe por trás do que sentimos?" subtitle="Sintoma, inconsciente e fantasias: um percurso por Freud, Lacan e Melanie Klein." center/>
+    </Sequence>
+    <Sequence from={300} durationInFrames={270}>
+      <Scene kind="mind" tag="PARTE 1 • FREUD" title="O sintoma não aparece do nada" subtitle="No artigo, o sintoma é apresentado inicialmente como expressão de algo recalcado: um conflito que não chega diretamente à consciência." accent={C.coral}/>
+    </Sequence>
+    <Sequence from={570} durationInFrames={300}>
+      <BulletScene kind="mind" tag="FREUD → LACAN" title="Duas dimensões do sintoma" items={[
+        "Dimensão simbólica: o sintoma pode funcionar como uma mensagem ligada ao recalcado.",
+        "Essa mensagem pode ser interpretada, como outras formações do inconsciente.",
+        "Mas o sintoma também envolve uma satisfação paradoxal, que pode produzir sofrimento."
+      ]} accent={C.gold}/>
+    </Sequence>
+    <Sequence from={870} durationInFrames={270}>
+      <Scene kind="mind" tag="A LEITURA DE LACAN" title="Nem tudo vira palavra" subtitle="O texto destaca que há algo no sintoma que não se deixa simbolizar completamente: um núcleo real de gozo, ligado à pulsão." accent={C.lilac}/>
+    </Sequence>
+    <Sequence from={1140} durationInFrames={300}>
+      <Scene kind="play" tag="PARTE 2 • MELANIE KLEIN" title="A fantasia inconsciente" subtitle="Para Klein, as fantasias estão presentes desde o início da vida e representam, na mente, os impulsos libidinais e agressivos." accent={C.mint}/>
+    </Sequence>
+    <Sequence from={1440} durationInFrames={300}>
+      <BulletScene kind="play" tag="DESENVOLVIMENTO" title="Duas posições importantes" items={[
+        "Posição esquizo-paranóide: o bebê tende a dividir o objeto em bom e mau, com ansiedades e sentimentos intensos.",
+        "Posição depressiva: ocorre maior integração do ego e do objeto, junto a sentimentos de preocupação e possível perda.",
+        "As posições podem reaparecer ao longo da vida, conforme o contexto."
+      ]} accent={C.mint}/>
+    </Sequence>
+    <Sequence from={1740} durationInFrames={300}>
+      <Scene kind="play" tag="FANTASIA E BRINCADEIRA" title="Brincar também comunica" subtitle="O artigo apresenta o brincar como uma via importante para a expressão da vida fantasmática infantil, especialmente quando a criança ainda não consegue colocar tudo em palavras." accent={C.gold}/>
+    </Sequence>
+    <Sequence from={2040} durationInFrames={300}>
+      <Scene kind="intro" tag="PARA FECHAR" title="O inconsciente deixa marcas" subtitle="Em Freud e Lacan, o sintoma aponta para algo que não se apresenta de forma direta. Em Klein, as fantasias inconscientes participam das primeiras relações com os objetos e da vida psíquica." center accent={C.coral}/>
+    </Sequence>
+    <Sequence from={2340} durationInFrames={300}>
+      <Scene kind="intro" title="Obrigada por assistir!" subtitle="Conteúdo elaborado a partir dos artigos do material de leitura." center accent={C.gold}/>
+    </Sequence>
+  </AbsoluteFill>;
+};
+Pasta reservada para arquivos de mídia opcionais, como uma trilha sonora ou narração gravada.
+{
+  "name": "video-artigos-psicanalise",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vídeo animado sobre os artigos O sintoma: de Freud a Lacan e Melanie Klein e as fantasias inconscientes.",
+  "scripts": {
+    "start": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts VideoPsicanalise out/video-psicanalise.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.0"
+  }
+}
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src"]
+}
+node_modules
+out
+.DS_Store
+# Vídeo sobre dois artigos de psicanálise
+
+Projeto em Remotion para gerar um vídeo animado em português sobre:
+
+1. **“O sintoma: de Freud a Lacan”**, de Maria das Graças Leite Villela Dias.
+2. **“Melanie Klein e as fantasias inconscientes”**, de Marcella Pereira de Oliveira.
+
+O visual é inspirado em pixel art, com três ambientes gráficos recorrentes e animações de texto. O vídeo tem formato horizontal (16:9), resolução 1920 × 1080 e duração aproximada de 1 minuto e 28 segundos.
+
+## O que você precisa
+
+- Um computador.
+- Node.js instalado (versão LTS).
+- Uma conexão com a internet na primeira instalação das dependências.
+
+## Como abrir e gerar o vídeo
+
+1. Baixe e instale o Node.js: https://nodejs.org/
+2. Extraia este arquivo ZIP para uma pasta do computador.
+3. Abra a pasta do projeto.
+4. Na barra de endereço da pasta, digite `cmd` e aperte Enter (Windows).
+5. No terminal que abrir, execute:
+
+```bash
+npm install
+```
+
+6. Para abrir uma prévia e ver as cenas:
+
+```bash
+npm start
+```
+
+7. Para gerar o arquivo MP4:
+
+```bash
+npm run render
+```
+
+Quando terminar, o vídeo estará em `out/video-psicanalise.mp4`.
+
+## Como colocar no GitHub
+
+1. Entre em https://github.com/
+2. Clique em **New repository**.
+3. Dê um nome, por exemplo `video-psicanalise`.
+4. Crie o repositório.
+5. Dentro do repositório, clique em **Add file > Upload files**.
+6. Envie os arquivos e pastas extraídos do ZIP (não precisa enviar `node_modules` nem a pasta `out`).
+7. Clique em **Commit changes**.
+
+**Importante:** o GitHub guarda o código, mas não renderiza o vídeo sozinho. Para gerar o MP4, rode os comandos no computador seguindo os passos acima.
+
+## Narração
+
+O arquivo `ROTEIRO-NARRACAO.md` contém o texto de narração. O vídeo gerado pelo projeto tem animações e textos, mas não possui voz gravada. Você pode gravar a narração e adicionar o áudio em um editor de vídeo.
+
+## Personalização
+
+As cenas e os textos ficam em `src/Video.tsx`. Você pode alterar títulos, frases, cores e duração das cenas.
+
+## Base do conteúdo
+
+O roteiro foi elaborado a partir dos dois artigos indicados acima, no PDF fornecido na conversa. O vídeo é uma síntese introdutória e não substitui a leitura integral dos textos.
+# Roteiro de narração
+
+Este roteiro acompanha as cenas do vídeo. Leia com calma, em tom explicativo. O vídeo gerado pelo código não inclui voz automaticamente: grave sua narração separadamente e adicione o áudio na edição, se desejar.
+
+## 1. Abertura
+O que existe por trás daquilo que sentimos e nem sempre conseguimos explicar? Os dois artigos deste vídeo nos aproximam de temas importantes da psicanálise: o sintoma, o inconsciente e as fantasias inconscientes. Vamos passar por ideias de Freud, Lacan e Melanie Klein.
+
+## 2. Freud e o sintoma
+No primeiro artigo, o sintoma é apresentado, inicialmente, como uma expressão do recalcado. Isso significa que ele está relacionado a conteúdos e conflitos que não chegam diretamente à consciência. O sintoma não é tratado apenas como algo sem sentido: ele tem uma relação com a história psíquica do sujeito.
+
+## 3. A leitura de Lacan
+O texto apresenta duas dimensões. Na dimensão simbólica, o sintoma pode ser entendido como uma mensagem ligada ao recalcado, que pode ser decifrada pela interpretação. Mas o artigo também destaca que essa leitura não explica tudo. Existe uma satisfação paradoxal no sintoma: algo que pode produzir sofrimento e, ao mesmo tempo, está ligado à pulsão.
+
+## 4. O núcleo real
+Na releitura de Lacan apresentada pelo artigo, há um núcleo real de gozo que não pode ser totalmente simbolizado. Em outras palavras, nem tudo o que está em jogo no sintoma consegue ser traduzido em palavras ou esclarecido apenas pela busca de um significado.
+
+## 5. Melanie Klein e as fantasias inconscientes
+O segundo artigo aborda a teoria de Melanie Klein. Nele, as fantasias inconscientes são apresentadas como presentes desde o início da vida. Elas são representantes psíquicas dos impulsos libidinais e agressivos e participam da forma como o bebê se relaciona com os objetos ao seu redor.
+
+## 6. As posições
+O texto descreve a posição esquizo-paranóide, marcada pela fragmentação do ego e pela divisão do objeto em bom e mau. Com a elaboração desses sentimentos, pode emergir a posição depressiva, na qual há maior integração do ego e do objeto, além de sentimentos relacionados à possibilidade de perda. O artigo ressalta que essas posições podem continuar presentes ao longo da vida e alternar conforme o contexto.
+
+## 7. A brincadeira
+O artigo também destaca a brincadeira como uma forma importante de expressão da vida fantasmática infantil. Como a criança pequena ainda não consegue expressar tudo por palavras, o brincar pode permitir que sentimentos e fantasias apareçam por meio de brinquedos, desenhos e jogos.
+
+## 8. Encerramento
+Assim, os textos apresentam caminhos diferentes para pensar a vida inconsciente. O primeiro acompanha a teoria do sintoma em Freud e sua releitura por Lacan. O segundo mostra como, para Melanie Klein, as fantasias inconscientes participam das primeiras relações e do desenvolvimento psíquico. Em ambos, aquilo que não aparece diretamente na consciência tem um papel importante.
